@@ -8,6 +8,20 @@ class DebateSet:
         self.speeches = speeches
         self.scores = scores
 
+    @staticmethod
+    def from_dir(topic):
+        debate_lists = set_debates.set_speech_list(
+        "{}/debates.txt".format(topic),
+        "{}/orders.txt".format(topic),
+        )
+        speeches_list = set_debates.flatten(debate_lists)
+
+        with open("{}/scores.txt".format(topic), 'r') as h:
+            scores = h.read()
+            score_list = [float(s) for s in scores.split()]
+
+        return DebateSet(debate_lists, speeches_list, score_list)
+
     def to_model_input(self, tokenizer):
         # token
         speech_tokens = list(
@@ -33,17 +47,3 @@ class DebateSet:
             torch.tensor(speech_ids),
             torch.tensor(self.scores[:len(speech_ids)]),
         )
-
-    @staticmethod
-    def from_dir(topic):
-        debate_lists = set_debates.set_speech_list(
-        "{}/debates.txt".format(topic),
-        "{}/orders.txt".format(topic),
-        )
-        speeches_list = set_debates.flatten(debate_lists)
-
-        with open("{}/scores.txt".format(topic), 'r') as h:
-            scores = h.read()
-            score_list = [float(s) for s in scores.split()]
-
-        return DebateSet(debate_lists, speeches_list, score_list)

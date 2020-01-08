@@ -1,4 +1,8 @@
 
+import json
+import os
+import logging
+
 import numpy as np
 
 import torch
@@ -31,39 +35,49 @@ class DebateScorer:
 
         self.loss_fn = nn.MSELoss()
 
+    @staticmethod
+    def from_pretrained(fn_model, args, device):
+        logging.info("Loading model from {}...".format(fn_model))
+
+        m = DebateScorer(args, device)
+        m.scorer.load_state_dict(torch.load(fn_model))
+        m.scorer = m.scorer.to(device)
+
+        return m
+
     def get_tokenizer(self):
         return self.tok
 
     def fit(self,
             xy_train: torch.utils.data.dataset.TensorDataset,
             xy_val: torch.utils.data.dataset.TensorDataset,
-            fn_save_to,
+            fn_save_to_dir,
             ):
         optimizer = optim.Adam(self.scorer.parameters(), lr=self.args.learning_rate)
         best_val_mse = 9999
 
-        print("Start training...")
+        logging.info("Start training...")
 
         for epoch in range(self.args.epochs):
-            print("Epoch", epoch)
+            logging.info("Epoch {}".format(epoch))
 
             train_loss = self.fit_epoch(xy_train, optimizer)
 
             with torch.no_grad():
-                val_loss = self.validate(xy_val)
+                val_loss, _ = self.validate(xy_val)
 
-            print("MSE", "Train:", train_loss, "Val:", val_loss)
-            print("RMSE", "Train:", np.sqrt(train_loss), "Val:", np.sqrt(val_loss))
+            logging.info("MSE Train: {} Val: {}".format(train_loss, val_loss))
+            logging.info("RMSE Train: {} Val: {}".format(np.sqrt(train_loss), np.sqrt(val_loss)))
 
             if best_val_mse > val_loss:
-                print("Best validation loss. Saving to {}...".format(fn_save_to))
-                torch.save(self.scorer.state_dict(), fn_save_to)
+                logging.info("Best validation loss. Saving to {}...".format(fn_save_to_dir))
+                torch.save(self.scorer.state_dict(), fn_save_to_dir)
 
                 best_val_mse = val_loss
 
-
     def fit_epoch(self, xy_train: torch.utils.data.dataset.TensorDataset, optimizer):
-        running_loss = 0.0
+        running_loss = []
+        grad_accum_steps = 0
 
         self.scorer.train()
         self.scorer.roberta.eval()
@@ -74,25 +88,29 @@ class DebateScorer:
             shuffle=True,
         )
 
+        optimizer.zero_grad()
+
         for batch in tqdm(iter_train):
             speeches, y_true = (d.to(self.device) for d in batch)
 
-            optimizer.zero_grad()
-
             # Forward pass
             y_pred = self.scorer(speeches)
-            loss = self.loss_fn(y_pred, y_true)
+            loss = self.loss_fn(y_pred, y_true) / self.args.grad_accum
+
+            running_loss += [loss.item()]
+            grad_accum_steps += 1
 
             # Backward pass
             loss.backward()
-            optimizer.step()
 
-            running_loss += loss.item()
+            if grad_accum_steps % self.args.grad_accum == 0:
+                optimizer.step()
+                optimizer.zero_grad()
 
-        return running_loss / len(xy_train)
+        return np.mean(running_loss)
 
     def validate(self, xy_val: torch.utils.data.dataset.TensorDataset):
-        running_loss = 0.0
+        running_loss = []
 
         self.scorer.eval()
         self.scorer.roberta.eval()
@@ -102,12 +120,34 @@ class DebateScorer:
             batch_size=self.args.batch_size,
         )
 
+        y_preds = []
+
         for batch in tqdm(iter_val):
             speeches, y_true = (d.to(self.device) for d in batch)
 
             y_pred = self.scorer(speeches)
             loss = self.loss_fn(y_pred, y_true)
 
-            running_loss += loss.item()
+            y_preds.extend(y_pred.cpu().detach().numpy())
 
-        return running_loss / len(xy_val)
+            running_loss += [loss.item()]
+
+        return np.mean(running_loss), np.array(y_preds)
+
+    def test(self, xy_test, fn_save_to_dir):
+        logging.info("Start evaluation...")
+
+        with torch.no_grad():
+            val_loss, y_pred = self.validate(xy_test)
+
+        result_log = {
+            "rmse": np.sqrt(val_loss),
+            "prediction": y_pred.tolist()
+        }
+
+        print(result_log)
+        
+        logging.info("Results are stored in {}/results.json.".format(fn_save_to_dir))
+
+        with open(os.path.join(fn_save_to_dir, "results.json"), "w") as f:
+            json.dump(result_log, f)

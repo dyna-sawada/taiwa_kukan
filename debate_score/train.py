@@ -2,12 +2,16 @@ import argparse
 import glob
 import os
 import random
+import json
+
+import logging
 
 import torch
 import numpy as np
 
 from data import DebateSet
 from model import DebateScorer
+
 
 
 def main(args):
@@ -23,13 +27,23 @@ def main(args):
 
     # Prepare GPU.
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(device)
+    logging.info(device)
 
-    # Prepare the model and train!
+    train(dataset, args, device)
+    test(dataset, args, device)
+
+
+def train(dataset, args, device):
+    # Prepare and train the model!
     m = DebateScorer(args, device)
     tokenizer = m.get_tokenizer()
 
     os.system("mkdir -p {}".format(args.model_dir))
+
+    with open(os.path.join(args.model_dir, "params.json"), "w") as f:
+        json.dump(args.__dict__, f)
+
+    logging.info(args.__dict__)
 
     m.fit(dataset["microchip"].to_model_input(tokenizer),
           dataset["part-time-job"].to_model_input(tokenizer),
@@ -37,7 +51,21 @@ def main(args):
           )
 
 
+def test(dataset, args, device):
+    # Prepare and evaluate the model!
+    m = DebateScorer.from_pretrained(os.path.join(args.model_dir, "best_model.pt"),
+                                     args, device)
+    tokenizer = m.get_tokenizer()
+
+    m.test(dataset["four-day-work"].to_model_input(tokenizer),
+           args.model_dir)
+
+
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s- %(name)s - %(levelname)s - %(message)s')
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-t', '--trial', type=int, required=True,
@@ -55,6 +83,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '-lr', '--learning-rate', default=1e-5, type=float,
         help="Learning rate.")
+    parser.add_argument(
+        '-ga', '--grad-accum', default=16, type=int,
+        help="Gradient accumulation steps.")
 
     parser.add_argument(
         '-pytr', '--pytrcache-path', default="/work01/naoya-i/pytr",
