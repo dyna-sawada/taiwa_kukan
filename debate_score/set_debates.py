@@ -23,9 +23,9 @@ def make_speech_list(Debate, Order):
          speech_list.append(Debate[Order[0]])
     if Order[0] != 0 and Order[1] != 0:
         speech_list.append(Debate[Order[0]]+"<s> "+Debate[Order[1]]+"</s>")
-    if Order[0] != 0 and Order[1] != 0 and Order[2] != 0:
+    if Order[0] != 0 and Order[1] != 0 and Order[2] != 0 or Order[0] != 0 and Order[1] == 0 and Order[2] != 0:
         speech_list.append(Debate[Order[0]]+"<s> "+Debate[Order[1]]+"</s> <s> "+Debate[Order[2]]+"</s>")
-    if Order[0] != 0 and Order[1] != 0 and Order[2] != 0 and Order[3] != 0:
+    if Order[0] != 0 and Order[1] != 0 and Order[2] != 0 and Order[3] != 0 or Order[0] != 0 and Order[1] != 0 and Order[2] == 0 and Order[3] != 0:
         speech_list.append(Debate[Order[0]]+"<s> "+Debate[Order[1]]+"</s> <s> "+Debate[Order[2]]+"</s> <s> "+Debate[Order[3]]+"</s>")
     if Order[4] != 0:
         speech_list.append(Debate[Order[4]])
