@@ -66,8 +66,8 @@ def set_speech_list(D, O):
         
     table_lists = []
     index = 1
-    for a in range(len(debate_lists)):
-        for b in range(len(debate_lists[index -1])):
+    for a in range(len(speeches_lists)):
+        for b in range(len(speeches_lists[index -1])):
             table_lists.append(index)
         index += 1
 
