@@ -14,7 +14,11 @@ def main():
 
     print("# Cross-topic leave-one-out")
     print(len(all_rmse), "results are available.")
-    print("RMSE: {:.1f}".format(np.mean(list(all_rmse.values()))))
+    print("RMSE: {:.1f} (±{:.1f})".format(
+        np.mean(list(all_rmse.values())),
+        np.std(list(all_rmse.values())),
+    ))
+
     print("Details:")
 
     for topic in all_rmse:
