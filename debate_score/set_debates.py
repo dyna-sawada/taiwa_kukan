@@ -64,11 +64,3 @@ def set_speech_list(D, O):
     for (debate_list, order_list) in zip(debate_lists, order_lists):
         speeches_lists.append(make_speech_list(debate_list, order_list))
     return speeches_lists
-
-
-"""
-# 書き出しチェック
-str_ = '\n'.join(speeches_list)
-with open("result_test.txt", 'w') as f:
-    f.write(str_)
-    """

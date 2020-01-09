@@ -45,8 +45,8 @@ def train(dataset, args, device):
 
     logging.info(args.__dict__)
 
-    m.fit(dataset["microchip"].to_model_input(tokenizer),
-          dataset["part-time-job"].to_model_input(tokenizer),
+    m.fit(DebateSet.concat([dataset[t] for t in args.train_topic.split(",")]).to_model_input(tokenizer),
+          dataset[args.val_topic].to_model_input(tokenizer),
           args.model_dir,
           )
 
@@ -57,7 +57,7 @@ def test(dataset, args, device):
                                      args, device)
     tokenizer = m.get_tokenizer()
 
-    m.test(dataset["four-day-work"].to_model_input(tokenizer),
+    m.test(dataset[args.test_topic].to_model_input(tokenizer),
            args.model_dir)
 
 
@@ -73,6 +73,16 @@ if __name__ == "__main__":
     parser.add_argument(
         '-out', '--model-dir', required=True,
         help="Output directory.")
+
+    parser.add_argument(
+        '-trtp', '--train-topic', required=True,
+        help="Topic to be trained. You can specify multiple topics by colon.")
+    parser.add_argument(
+        '-vtp', '--val-topic', required=True,
+        help="Topic to be validated.")
+    parser.add_argument(
+        '-tstp', '--test-topic', required=True,
+        help="Topic to be tested.")
 
     parser.add_argument(
         '-ep', '--epochs', default=10, type=int,
