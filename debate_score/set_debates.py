@@ -63,4 +63,12 @@ def set_speech_list(D, O):
     speeches_lists = []
     for (debate_list, order_list) in zip(debate_lists, order_lists):
         speeches_lists.append(make_speech_list(debate_list, order_list))
-    return speeches_lists
+        
+    table_lists = []
+    index = 1
+    for a in range(len(debate_lists)):
+        for b in range(len(debate_lists[index -1])):
+            table_lists.append(index)
+        index += 1
+
+    return speeches_lists, table_lists
