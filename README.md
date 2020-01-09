@@ -12,11 +12,34 @@
 
 # How to run
 
-## Training
+## Training & Evaluation
+
+Run the following command:
+
 ```
-CUDA_VISIBLE_DEVICES=0 python train.py -out models/microchip
+CUDA_VISIBLE_DEVICES=0 python train.py --trial 0 -lr 1e-3 \
+    --train-topic four-day-work --val-topic part-time-job --test-topic microchip \
+    --model-dir models/microchip
 ```
 
-## Evaluation
+You can specify topics for training, validation and testing by `--*-topic` parameters.
 
-TBA
+This yields the following files in `models/microchip`:
+
+- `best_model.pt`: the best model (on validation set)
+- `results.json`: RMSE and prediction on testset.
+- `train_log.json`: training log containing train loss and validation loss.
+
+
+## Automated evaluation
+### Leave-one-out evaluation (in-domain testing)
+
+```
+python eval_loo.py | CUDA_VISIBLE_DEVICES=0 zsh
+```
+
+### Cross-topic leave-one-out evaluation (out-domain testing)
+
+```
+python eval_topic_loo.py | CUDA_VISIBLE_DEVICES=0 zsh
+```
