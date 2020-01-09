@@ -47,13 +47,13 @@ def train(dataset, args, device):
 
     m.fit(dataset["microchip"].to_model_input(tokenizer),
           dataset["part-time-job"].to_model_input(tokenizer),
-          os.path.join(args.model_dir, "best_model.pt"),
+          args.model_dir,
           )
 
 
 def test(dataset, args, device):
     # Prepare and evaluate the model!
-    m = DebateScorer.from_pretrained(os.path.join(args.model_dir, "best_model.pt"),
+    m = DebateScorer.from_pretrained(args.model_dir,
                                      args, device)
     tokenizer = m.get_tokenizer()
 

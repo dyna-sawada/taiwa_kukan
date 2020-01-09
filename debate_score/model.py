@@ -36,7 +36,8 @@ class DebateScorer:
         self.loss_fn = nn.MSELoss()
 
     @staticmethod
-    def from_pretrained(fn_model, args, device):
+    def from_pretrained(fn_model_dir, args, device):
+        fn_model = os.path.join(fn_model_dir, "best_model.pt")
         logging.info("Loading model from {}...".format(fn_model))
 
         m = DebateScorer(args, device)
@@ -55,6 +56,7 @@ class DebateScorer:
             ):
         optimizer = optim.Adam(self.scorer.parameters(), lr=self.args.learning_rate)
         best_val_mse = 9999
+        train_losses, val_losses = [], []
 
         logging.info("Start training...")
 
@@ -66,14 +68,25 @@ class DebateScorer:
             with torch.no_grad():
                 val_loss, _ = self.validate(xy_val)
 
+            train_losses.append(train_loss)
+            val_losses.append(val_loss)
+
             logging.info("MSE Train: {} Val: {}".format(train_loss, val_loss))
             logging.info("RMSE Train: {} Val: {}".format(np.sqrt(train_loss), np.sqrt(val_loss)))
 
             if best_val_mse > val_loss:
                 logging.info("Best validation loss. Saving to {}...".format(fn_save_to_dir))
-                torch.save(self.scorer.state_dict(), fn_save_to_dir)
+                torch.save(self.scorer.state_dict(), os.path.join(fn_save_to_dir, "best_model.pt"))
 
                 best_val_mse = val_loss
+
+        with open(os.path.join(fn_save_to_dir, "train_log.json"), "w") as f:
+            train_log = {
+                "train_losses": train_losses,
+                "val_losses": val_losses,
+            }
+
+            json.dump(train_log, f)
 
     def fit_epoch(self, xy_train: torch.utils.data.dataset.TensorDataset, optimizer):
         running_loss = []
@@ -146,7 +159,7 @@ class DebateScorer:
         }
 
         print(result_log)
-        
+
         logging.info("Results are stored in {}/results.json.".format(fn_save_to_dir))
 
         with open(os.path.join(fn_save_to_dir, "results.json"), "w") as f:
