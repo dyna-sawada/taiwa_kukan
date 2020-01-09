@@ -1,5 +1,6 @@
 
 import logging
+import json
 
 import torch
 import set_debates
@@ -42,6 +43,10 @@ class DebateSet:
             scores.extend(dbs.scores)
 
         return DebateSet(debates, speeches, scores)
+
+    def to_json(self, fn):
+        with open(fn, "w") as f:
+            json.dump({"debates": self.debates, "speeches": self.speeches, "scores": self.scores}, f)
 
     def to_model_input(self, tokenizer):
         # token

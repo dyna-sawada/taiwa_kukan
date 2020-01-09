@@ -43,3 +43,9 @@ python eval_loo.py | CUDA_VISIBLE_DEVICES=0 zsh
 ```
 python eval_topic_loo.py | CUDA_VISIBLE_DEVICES=0 zsh
 ```
+
+## Summarizing results
+
+```
+python summarize_results.py
+```
