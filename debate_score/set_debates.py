@@ -117,10 +117,8 @@ def set_speech_list(D, O):
         speeches_lists.append(make_speech_list_ctxappend(debate_list, order_list))
         
     table_lists = []
-    index = 1
-    for a in range(len(speeches_lists)):
-        for b in range(len(speeches_lists[index -1])):
-            table_lists.append(index)
-        index += 1
+    for index in range(len(speeches_lists)):
+        for b in range(len(speeches_lists[index])):
+            table_lists.append(index+1)
 
     return speeches_lists, table_lists
