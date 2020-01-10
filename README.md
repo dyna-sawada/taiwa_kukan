@@ -30,6 +30,14 @@ This yields the following files in `models/roberta_lr1e-3/microchip`:
 - `train_log.json`: training log containing train loss and validation loss.
 
 
+## Random baseline
+
+```
+python run_randombaseline.py --trial 0 --model-dir models/random
+```
+
+This yields the subdirectories for each topic in `models/random` (i.e. `models/random/microchip`, `models/random/four-day-work`, etc.).
+
 ## Automated evaluation
 ### Leave-one-out evaluation (in-domain testing)
 
