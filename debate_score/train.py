@@ -45,8 +45,8 @@ def train(dataset, args, device):
 
     logging.info(args.__dict__)
 
-    m.fit(DebateSet.concat([dataset[t] for t in args.train_topic.split(",")]).to_model_input(tokenizer),
-          dataset[args.val_topic].to_model_input(tokenizer),
+    m.fit(DebateSet.concat([dataset[t] for t in args.train_topic.split(",")]).to_model_input(args, tokenizer),
+          dataset[args.val_topic].to_model_input(args, tokenizer),
           args.model_dir,
           )
 
@@ -57,7 +57,7 @@ def test(dataset, args, device):
                                      args, device)
     tokenizer = m.get_tokenizer()
 
-    m.test(dataset[args.test_topic].to_model_input(tokenizer),
+    m.test(dataset[args.test_topic].to_model_input(args, tokenizer),
            args.model_dir)
 
 
@@ -85,6 +85,10 @@ if __name__ == "__main__":
         help="Topic to be tested.")
 
     parser.add_argument(
+        '-bin', '--binary-class', action="store_true",
+        help="Use binary class for prediction.")
+
+    parser.add_argument(
         '-ep', '--epochs', default=10, type=int,
         help="Max training epochs.")
     parser.add_argument(
@@ -96,6 +100,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '-ga', '--grad-accum', default=16, type=int,
         help="Gradient accumulation steps.")
+    parser.add_argument(
+        '-enc-ft', '--encoder-finetune', action="store_true",
+        help="Finetune encoder.")
 
     parser.add_argument(
         '-pytr', '--pytrcache-path', default="/work01/naoya-i/pytr",
