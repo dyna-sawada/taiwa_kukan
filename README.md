@@ -13,6 +13,8 @@
 
 ## Training & Evaluation
 
+### Out-domain
+
 Run the following command:
 
 ```
@@ -29,6 +31,17 @@ This yields the following files in `models/roberta_lr1e-3/microchip`:
 - `results.json`: RMSE and prediction on testset.
 - `train_log.json`: training log containing train loss and validation loss.
 
+
+### In-domain
+
+```
+CUDA_VISIBLE_DEVICES=0 python train.py --trial 0 -lr 1e-3 \
+    --loo-test-target microchip:1 \
+    --model-dir models/roberta_lr1e-3/microchip_1
+```
+
+This yields the same types of output files as the out-domain experiment.
+Note that the specified topic needs to have more than 3 tables.
 
 ## Random baseline
 

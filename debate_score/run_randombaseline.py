@@ -25,7 +25,7 @@ def main(args):
     for topic in dataset:
         os.system("mkdir -p {}".format(os.path.join(args.model_dir, topic)))
 
-        prediction = [100*(random.random()-0.5) for t in range(len(dataset[topic].scores))]
+        prediction = [random.randint(-5, 5) for t in range(len(dataset[topic].scores))]
         gold = dataset[topic].scores
 
         log = {

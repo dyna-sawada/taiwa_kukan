@@ -21,6 +21,7 @@ class DebateSet:
         debate_list, table_list = set_debates.set_speech_list(
             "{}/debates.txt".format(topic),
             "{}/orders.txt".format(topic),
+            sep="[SEP]"
         )
 
         speeches_list = set_debates.flatten(debate_list)
@@ -30,6 +31,7 @@ class DebateSet:
             "{}/orders.txt".format(topic),
         )
         score_list = set_scores.flatten(score_list)
+        score_list = [float(int(s/10)) for s in score_list]
 
         with open("{}/preprocessed.txt".format(topic), "w") as f:
             for sp, sc in zip(speeches_list, score_list):
@@ -56,8 +58,6 @@ class DebateSet:
             ]
         new_dbs = list(zip(*new_dbs))
 
-        print(new_dbs)
-
         return DebateSet(*new_dbs)
 
     def to_json(self, fn):
@@ -74,7 +74,6 @@ class DebateSet:
                                        pad_to_max_length=MAX_SEQ_LEN) for t in speech_tokens]
 
         logging.info(tokenizer.decode(speech_ids[0], clean_up_tokenization_spaces=False))
-        logging.info(tokenizer.decode(speech_ids[1], clean_up_tokenization_spaces=False))
 
         return torch.utils.data.dataset.TensorDataset(
             torch.tensor(speech_ids),

@@ -2,6 +2,7 @@
 import json
 import os
 import logging
+import pickle
 
 import numpy as np
 
@@ -11,7 +12,9 @@ import torch.optim as optim
 
 from sklearn.metrics import accuracy_score
 
-from transformers import RobertaModel, RobertaTokenizer, AdamW, get_linear_schedule_with_warmup
+from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers import AlbertModel, AlbertTokenizer
+from transformers import RobertaModel, RobertaTokenizer
 from tqdm import tqdm
 
 
@@ -26,32 +29,46 @@ class DummyLR:
 class TorchDebateScorer(nn.Module):
     def __init__(self, args):
         super(TorchDebateScorer, self).__init__()
-        self.roberta = RobertaModel.from_pretrained("roberta-large",
-                                                    output_hidden_states=True)
-        self.fc1 = nn.Linear(1024, 1024)
+
+        if args.encoder == "albert":
+            self.docenc = AlbertModel.from_pretrained("albert-base-v2",
+                                                       output_hidden_states=True)
+            hidden_dim = 768
+        elif args.encoder == "roberta":
+            self.docenc = RobertaModel.from_pretrained("roberta-large",
+                                                       output_hidden_states=True)
+            hidden_dim = 1024
+
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
         self.args = args
 
         if args.binary_class:
-            self.fc2 = nn.Linear(1024, 2)
+            self.fc_reg = nn.Linear(hidden_dim, 2)
 
         else:
-            self.fc2 = nn.Linear(1024, 1)
+            self.fc_reg = nn.Linear(hidden_dim, 1)
 
         self.tanh = nn.Tanh()
 
-    def forward(self, x):
-        _, _, hidden_states = self.roberta(input_ids=x)
+    def forward(self, x_input_ids):
+        _, _, hidden_states = self.docenc(input_ids=x_input_ids)
+
+        # For mean pooling
         # out = torch.mean(hidden_states[-3], 1)
+
+        # Take [CLS] embedding.
         out = hidden_states[-1][:, 0]
 
         if self.args.binary_class:
             out = self.fc1(out)
             out = self.tanh(out)
-            out = self.fc2(out)
+            out = self.fc_reg(out)
 
         else:
-            out = self.fc2(out)
-            out = self.tanh(out) * 50
+            out = self.fc1(out)
+            out = self.tanh(out)
+            out = self.fc_reg(out)
+            out = self.tanh(out) * 5
             out = out[:, 0]
 
         return out
@@ -62,7 +79,11 @@ class DebateScorer:
         self.args = args
         self.device = device
         self.scorer = TorchDebateScorer(self.args).to(self.device)
-        self.tok = RobertaTokenizer.from_pretrained("roberta-large")
+
+        if args.encoder == "albert":
+            self.tok = AlbertTokenizer.from_pretrained("albert-base-v2")
+        elif args.encoder == "roberta":
+            self.tok = RobertaTokenizer.from_pretrained("roberta-large")
 
         if args.binary_class:
             self.loss_fn = torch.nn.CrossEntropyLoss()
@@ -92,9 +113,9 @@ class DebateScorer:
         self.scorer.train()
 
         if self.args.encoder_finetune:
-            self.scorer.roberta.train()
+            self.scorer.docenc.train()
         else:
-            self.scorer.roberta.eval()
+            self.scorer.docenc.eval()
 
         if self.args.encoder_finetune:
             no_decay = ['bias', 'LayerNorm.weight']
@@ -112,12 +133,12 @@ class DebateScorer:
                                                         num_training_steps=t_total)
 
         else:
-            trainable_params = list(self.scorer.fc1.parameters()) + list(self.scorer.fc2.parameters())
+            trainable_params = list(self.scorer.fc1.parameters()) + list(self.scorer.fc_reg.parameters())
             optimizer = optim.Adam(trainable_params,
                                    lr=self.args.learning_rate)
             scheduler = DummyLR()
 
-        best_val_mse = 9999
+        best_val_mse, best_model = 9999, None
         train_losses, val_losses = [], []
 
         logging.info("Start training...")
@@ -143,18 +164,23 @@ class DebateScorer:
                 logging.info("RMSE Train: {} Val: {}".format(np.sqrt(train_loss), np.sqrt(val_loss)))
 
             if best_val_mse > val_loss:
-                logging.info("Best validation loss. Saving to {}...".format(fn_save_to_dir))
-                torch.save(self.scorer.state_dict(), os.path.join(fn_save_to_dir, "best_model.pt"))
+                logging.info("Best validation loss!")
+                best_model = pickle.dumps(self.scorer.state_dict())
 
                 best_val_mse = val_loss
 
-        with open(os.path.join(fn_save_to_dir, "train_log.json"), "w") as f:
-            train_log = {
-                "train_losses": train_losses,
-                "val_losses": val_losses,
-            }
+            # Writing to the log file.
+            with open(os.path.join(fn_save_to_dir, "train_log.json"), "w") as f:
+                train_log = {
+                    "train_losses": train_losses,
+                    "val_losses": val_losses,
+                }
 
-            json.dump(train_log, f)
+                json.dump(train_log, f)
+
+        if best_model is not None:
+            logging.info("Saving the best model to {}...".format(fn_save_to_dir))
+            torch.save(pickle.loads(best_model), os.path.join(fn_save_to_dir, "best_model.pt"))
 
     def fit_epoch(self, xy_train: torch.utils.data.dataset.TensorDataset, optimizer, scheduler):
         running_loss = []
@@ -164,9 +190,9 @@ class DebateScorer:
         self.scorer.train()
 
         if self.args.encoder_finetune:
-            self.scorer.roberta.train()
+            self.scorer.docenc.train()
         else:
-            self.scorer.roberta.eval()
+            self.scorer.docenc.eval()
 
         iter_train = torch.utils.data.DataLoader(
             xy_train,
@@ -214,7 +240,7 @@ class DebateScorer:
         running_loss = []
 
         self.scorer.eval()
-        self.scorer.roberta.eval()
+        self.scorer.docenc.eval()
 
         iter_val = torch.utils.data.DataLoader(
             xy_val,

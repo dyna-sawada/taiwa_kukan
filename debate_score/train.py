@@ -43,7 +43,7 @@ def train(dataset, args, device):
     with open(os.path.join(args.model_dir, "params.json"), "w") as f:
         json.dump(args.__dict__, f)
 
-    logging.info(args.__dict__)
+    logging.info("Config: {}".format(json.dumps(args.__dict__, indent=1)))
 
     # Create training data
     if args.train_topic is not None:
@@ -51,15 +51,22 @@ def train(dataset, args, device):
         dbs_val = dataset[args.val_topic]
 
     if args.loo_test_target is not None:
-        topic, table_id_test = args.loo_test_target.split(":")
+        topic_test, table_id_test = args.loo_test_target.split(":")
         table_id_test = int(table_id_test)
         table_id_val = table_id_test + 1
 
-        if table_id_val not in dataset[topic].table_keys:
+        assert(len(dataset[topic_test].table_keys) >= 3)
+
+        if table_id_val not in dataset[topic_test].table_keys:
             table_id_val = 1
 
-        dbs_train = dataset[topic].filter(lambda _1, _2, tbl_id: tbl_id != table_id_test and tbl_id != table_id_val)
-        dbs_val = dataset[topic].filter(lambda _1, _2, tbl_id: tbl_id == table_id_val)
+        # In-topic construction
+        dbs_train = dataset[topic_test].filter(lambda _1, _2, tbl_id: tbl_id != table_id_test and tbl_id != table_id_val)
+        dbs_val = dataset[topic_test].filter(lambda _1, _2, tbl_id: tbl_id == table_id_val)
+
+        if not args.indomain_only:
+            # Add debates with other topics to the training data
+            dbs_train = dbs_train.concat([dataset[t] for t in dataset if t != topic_test])
 
     logging.info("Training on {} instances.".format(len(dbs_train.speeches)))
     logging.info("Validating on {} instances.".format(len(dbs_val.speeches)))
@@ -110,6 +117,10 @@ if __name__ == "__main__":
         '-loo', '--loo-test-target',
         help="Debate to be tested. Format: 'topic:table_id'")
     parser.add_argument(
+        '-ind', '--indomain-only', action="store_true",
+        help="Use debates with same domain only as training data.")
+
+    parser.add_argument(
         '-trtp', '--train-topic',
         help="Topic to be trained. You can specify multiple topics by colon.")
     parser.add_argument(
@@ -122,7 +133,6 @@ if __name__ == "__main__":
     parser.add_argument(
         '-bin', '--binary-class', action="store_true",
         help="Use binary class for prediction.")
-
     parser.add_argument(
         '-ep', '--epochs', default=10, type=int,
         help="Max training epochs.")
@@ -138,6 +148,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '-enc-ft', '--encoder-finetune', action="store_true",
         help="Finetune encoder.")
+    parser.add_argument(
+        '-enc', '--encoder', default="albert",
+        help="Encoder.")
 
     parser.add_argument(
         '-pytr', '--pytrcache-path', default="/work01/naoya-i/pytr",
