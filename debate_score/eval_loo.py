@@ -17,7 +17,8 @@ def main():
             print("""
 python train.py --trial 0 \\
     --loo-test-target {}:{} -out models/indomain/roberta_lr1e-6_ft/{}_{} \\
-    -lr 1e-6 --grad-accum 8 --batch-size 1 --epoch 10 --encoder-finetune
+    -lr 1e-6 --grad-accum 8 --batch-size 1 --epoch 20 --encoder albert --encoder-finetune \\
+    --indomain-only 
 """.format(
                 topic,
                 table_id_test,
