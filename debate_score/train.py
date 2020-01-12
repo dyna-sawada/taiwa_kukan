@@ -45,8 +45,27 @@ def train(dataset, args, device):
 
     logging.info(args.__dict__)
 
-    m.fit(DebateSet.concat([dataset[t] for t in args.train_topic.split(",")]).to_model_input(args, tokenizer),
-          dataset[args.val_topic].to_model_input(args, tokenizer),
+    # Create training data
+    if args.train_topic is not None:
+        dbs_train = DebateSet.concat([dataset[t] for t in args.train_topic.split(",")])
+        dbs_val = dataset[args.val_topic]
+
+    if args.loo_test_target is not None:
+        topic, table_id_test = args.loo_test_target.split(":")
+        table_id_test = int(table_id_test)
+        table_id_val = table_id_test + 1
+
+        if table_id_val not in dataset[topic].table_keys:
+            table_id_val = 1
+
+        dbs_train = dataset[topic].filter(lambda _1, _2, tbl_id: tbl_id != table_id_test and tbl_id != table_id_val)
+        dbs_val = dataset[topic].filter(lambda _1, _2, tbl_id: tbl_id == table_id_val)
+
+    logging.info("Training on {} instances.".format(len(dbs_train.speeches)))
+    logging.info("Validating on {} instances.".format(len(dbs_val.speeches)))
+
+    m.fit(dbs_train.to_model_input(args, tokenizer),
+          dbs_val.to_model_input(args, tokenizer),
           args.model_dir,
           )
 
@@ -57,7 +76,19 @@ def test(dataset, args, device):
                                      args, device)
     tokenizer = m.get_tokenizer()
 
-    m.test(dataset[args.test_topic].to_model_input(args, tokenizer),
+    # Create test data
+    if args.test_topic is not None:
+        dbs_test = dataset[args.test_topic]
+
+    if args.loo_test_target is not None:
+        topic, table_id_test = args.loo_test_target.split(":")
+        table_id_test = int(table_id_test)
+
+        dbs_test = dataset[topic].filter(lambda _1, _2, tbl_id: tbl_id == table_id_test)
+
+    logging.info("Testing on {} instances.".format(len(dbs_test.speeches)))
+
+    m.test(dbs_test.to_model_input(args, tokenizer),
            args.model_dir)
 
 
@@ -74,14 +105,18 @@ if __name__ == "__main__":
         '-out', '--model-dir', required=True,
         help="Output directory.")
 
+    # Evaluation target
     parser.add_argument(
-        '-trtp', '--train-topic', required=True,
+        '-loo', '--loo-test-target',
+        help="Debate to be tested. Format: 'topic:table_id'")
+    parser.add_argument(
+        '-trtp', '--train-topic',
         help="Topic to be trained. You can specify multiple topics by colon.")
     parser.add_argument(
-        '-vtp', '--val-topic', required=True,
+        '-vtp', '--val-topic',
         help="Topic to be validated.")
     parser.add_argument(
-        '-tstp', '--test-topic', required=True,
+        '-tstp', '--test-topic',
         help="Topic to be tested.")
 
     parser.add_argument(

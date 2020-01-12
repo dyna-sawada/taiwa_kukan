@@ -9,11 +9,12 @@ import set_scores
 MAX_SEQ_LEN = 512
 
 class DebateSet:
-    def __init__(self, debates, speeches, scores, tables):
-        self.debates = debates
+    def __init__(self, speeches, scores, tables):
         self.speeches = speeches
         self.scores = scores
         self.tables = tables
+
+        self.table_keys = list(set(tables))
 
     @staticmethod
     def from_dir(topic):
@@ -34,23 +35,34 @@ class DebateSet:
             for sp, sc in zip(speeches_list, score_list):
                 print(sc, sp, file=f)
 
-        return DebateSet(debate_list, speeches_list, score_list, table_list)
+        return DebateSet(speeches_list, score_list, table_list)
 
     @staticmethod
     def concat(debatesets: list):
-        debates, speeches, scores, tables = [], [], [], []
+        speeches, scores, tables = [], [], []
 
         for dbs in debatesets:
-            debates.extend(dbs.debates)
             speeches.extend(dbs.speeches)
             scores.extend(dbs.scores)
             tables.extend(dbs.tables)
 
-        return DebateSet(debates, speeches, scores, tables)
+        return DebateSet(speeches, scores, tables)
+
+    def filter(self, filter_fn):
+        new_dbs = [
+            (sp, sc, tb)
+            for sp, sc, tb in zip(self.speeches, self.scores, self.tables)
+            if filter_fn(sp, sc, tb)
+            ]
+        new_dbs = list(zip(*new_dbs))
+
+        print(new_dbs)
+
+        return DebateSet(*new_dbs)
 
     def to_json(self, fn):
         with open(fn, "w") as f:
-            json.dump({"debates": self.debates, "speeches": self.speeches,
+            json.dump({"speeches": self.speeches,
                        "scores": self.scores, "tables": self.tables}, f)
 
     def to_model_input(self, args, tokenizer):

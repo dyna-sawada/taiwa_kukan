@@ -13,7 +13,7 @@ def main():
 
         print("""
 python train.py --trial 0 \\
-    --train-topic {} --val-topic {} --test-topic {} -out models/roberta_lr1e-6_ft/roberta_{} \\
+    --train-topic {} --val-topic {} --test-topic {} -out models/outdomain/roberta_lr1e-6_ft/{} \\
     -lr 1e-6 --grad-accum 8 --batch-size 1 --epoch 10 --encoder-finetune
 """.format(
             ",".join([topics[i] for i in train_topic_i]),
