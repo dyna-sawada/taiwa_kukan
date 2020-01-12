@@ -39,22 +39,33 @@ python run_randombaseline.py --trial 0 --model-dir models/random
 This yields the subdirectories for each topic in `models/random` (i.e. `models/random/microchip`, `models/random/four-day-work`, etc.).
 
 ## Automated evaluation
-### Leave-one-out evaluation (in-domain testing)
+### In-domain leave-one-out evaluation
 
 ```
 python eval_loo.py | CUDA_VISIBLE_DEVICES=0 zsh
 ```
 
-### Cross-topic leave-one-out evaluation (out-domain testing)
+This outputs the results under `models/indomain/roberta_lr1e-6_ft`.
+
+### Out-domain leave-one-out evaluation
 
 ```
 python eval_topic_loo.py | CUDA_VISIBLE_DEVICES=0 zsh
 ```
 
-This outputs the results under `models/roberta_lr1e-6_ft`.
+This outputs the results under `models/outdomain/roberta_lr1e-6_ft`.
 
 ## Summarizing results
 
+For out-domain results, use the following command:
+
 ```
-python summarize_results.py -t models/roberta_lr1e-6_ft
+python summarize_results.py -t models/outdomain/roberta_lr1e-6_ft
 ```
+
+For in-domain results, use the following command:
+
+```
+python summarize_results.py -t models/indomain/roberta_lr1e-6_ft -i
+```
+

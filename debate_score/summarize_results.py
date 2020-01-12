@@ -1,4 +1,5 @@
 import argparse
+import collections
 
 import glob
 import json
@@ -15,11 +16,25 @@ def main(args):
 
         all_rmse[fn_ret.split("/")[-2]] = ret["rmse"]
 
-    print("# Cross-topic leave-one-out")
     print(len(all_rmse), "results are available.")
     print("--")
+
     for topic in all_rmse:
         print("{}\t{:.1f}".format(topic, all_rmse[topic]))
+
+    print("--")
+
+    if args.indomain:
+        topic_wise = collections.defaultdict(list)
+
+        for topic in all_rmse:
+            topic_wise[topic.split("_")[0]] += [all_rmse[topic]]
+
+        for topic in topic_wise:
+            print("{}\t{:.1f} (±{:.1f})".format(topic,
+                                                np.mean(topic_wise[topic]),
+                                                np.std(topic_wise[topic]),
+                                                ))
 
     print("--")
     print("Overall\t{:.1f} (±{:.1f})".format(
@@ -28,15 +43,14 @@ def main(args):
     ))
 
 
-    print()
-    print("# In-topic leave-one-out")
-    print("RMSE:", "Not implemented yet")
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-t', '--target-model', required=True,
         help="Model directory to be evaluated.")
+    parser.add_argument(
+        '-i', '--indomain', action="store_true",
+        help="Output in-domain specific analysis.")
 
     args = parser.parse_args()
     main(args)
