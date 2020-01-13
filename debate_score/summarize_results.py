@@ -72,9 +72,15 @@ def main(args):
     for model, label in zip(args.target_model.split(","), labels.split(",")):
         dfs += [get_result(args, model, label)]
 
-    pd.set_option("display.max_columns", 100)
-    pd.set_option("display.width", 100)
-    print(pd.concat(dfs, axis=1, sort=False).to_csv(sep="\t"))
+    df = pd.concat(dfs, axis=1, sort=False)
+
+    if args.format == "tsv":
+        out = df.to_csv(sep="\t", na_rep="-")
+        
+    elif args.format == "latex":
+        out = df.to_latex(na_rep="-")
+
+    print(out)
 
 
 if __name__ == "__main__":
@@ -92,6 +98,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '-tp', '--target-topic',
         help="Topics to be evaluated.")
+    parser.add_argument(
+        '-f', '--format', default="tsv",
+        help="Output format.")
 
     args = parser.parse_args()
     main(args)
