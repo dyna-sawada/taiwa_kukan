@@ -14,11 +14,16 @@ def main():
             continue
 
         for table_id_test in dataset[topic].table_keys:
+#             print("""
+# python train.py --trial 0 \\
+#     --loo-test-target {}:{} -out models/indomain/albert_lr1e-6_ft/{}_{} \\
+#     -lr 1e-6 --grad-accum 8 --batch-size 1 --epoch 20 --encoder albert --encoder-finetune \\
+#     --indomain-only
+# """.format(
             print("""
 python train.py --trial 0 \\
-    --loo-test-target {}:{} -out models/indomain/roberta_lr1e-6_ft/{}_{} \\
-    -lr 1e-6 --grad-accum 8 --batch-size 1 --epoch 20 --encoder albert --encoder-finetune \\
-    --indomain-only 
+    --loo-test-target {}:{} -out models/indomain_plus/albert_lr1e-6_ft/{}_{} \\
+    -lr 1e-6 --grad-accum 8 --batch-size 1 --epoch 20 --encoder albert --encoder-finetune
 """.format(
                 topic,
                 table_id_test,
