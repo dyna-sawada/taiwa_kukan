@@ -11,7 +11,15 @@
 
 # How to run
 
-## Training & Evaluation
+## Training & Testing
+
+The main script is `train.py`.
+See commandline options by:
+
+```
+python train.py --help
+```
+
 
 ### Out-domain
 
@@ -70,15 +78,15 @@ This outputs the results under `models/outdomain/roberta_lr1e-6_ft`.
 
 ## Summarizing results
 
-For out-domain results, use the following command:
+Use the following command:
 
 ```
 python summarize_results.py -t models/outdomain/roberta_lr1e-6_ft
 ```
 
-For in-domain results, use the following command:
+You can specify multiple models:
 
 ```
-python summarize_results.py -t models/indomain/roberta_lr1e-6_ft -i
+python summarize_results.py -t models/random_t1,models/outdomain/albert_lr1e-6_ft,models/indomain_plus/albert_lr1e-
+6_ft --labels random,outdomain,indomain
 ```
-
